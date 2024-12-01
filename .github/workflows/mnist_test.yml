@@ -1,0 +1,60 @@
+name: MNIST Model Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run MNIST training
+      run: |
+        python mnist_99_4.py > training_log.txt
+    
+    - name: Check parameter count and accuracy
+      run: |
+        echo "Checking training results..."
+        
+        # Check parameter count
+        PARAM_COUNT=$(grep "Total Parameters" training_log.txt | awk '{print $NF}' | tr -d ',')
+        if [ -n "$PARAM_COUNT" ] && [ "$PARAM_COUNT" -gt 20000 ]; then
+          echo "Parameter count ($PARAM_COUNT) exceeds 20,000!"
+          exit 1
+        fi
+        
+        # Check accuracy
+        BEST_ACC=$(grep "Best Test Accuracy:" training_log.txt | awk '{print $4}' | tr -d '%')
+        if [ -n "$BEST_ACC" ] && (( $(echo "$BEST_ACC < 99.4" | bc -l) )); then
+          echo "Best accuracy ($BEST_ACC%) is less than 99.4%!"
+          exit 1
+        fi
+        
+        echo "All checks passed! Parameter count: $PARAM_COUNT, Best accuracy: $BEST_ACC%"
+    
+    - name: Upload training log
+      uses: actions/upload-artifact@v2
+      with:
+        name: training-results
+        path: |
+          training_log.txt
+          accuracy_plot.png 

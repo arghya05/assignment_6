@@ -1,0 +1,6 @@
+torch>=2.2.0
+torchvision
+numpy>=1.26.0
+matplotlib>=3.7.1
+tqdm>=4.65.0
+pillow>=10.0.0 
